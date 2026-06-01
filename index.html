@@ -59,12 +59,36 @@ body {
 .center-panel { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
 .question-area {
   background: var(--card); border: 2px solid var(--border);
-  border-radius: 12px; padding: 10px 18px; text-align: center;
+  border-radius: 12px; padding: 8px 12px;
   box-shadow: var(--glow); width: 100%; max-width: 500px;
 }
-.question-area .q-word { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 900; }
-.question-area .q-pinyin { font-size: 0.85rem; color: var(--accent2); margin: 2px 0; }
-.question-area .q-prompt { font-size: 0.8rem; color: var(--text2); }
+.q-top-row { display: flex; gap: 10px; align-items: stretch; }
+.q-left {
+  flex: 0 0 auto; text-align: left;
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0;
+}
+.q-left .q-prompt { font-size: 0.68rem; color: var(--text2); }
+.q-left .q-word { font-size: clamp(1rem, 3.5vw, 1.5rem); font-weight: 900; line-height: 1.2; }
+.q-left .q-pinyin { font-size: 0.72rem; color: var(--accent2); margin-top: 1px; }
+.q-right {
+  flex: 1 1 auto; display: grid;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  gap: 4px; min-width: 0;
+}
+.q-opt {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 6px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--card2);
+  font-size: 0.68rem; min-width: 0;
+}
+.q-opt.reveal-correct { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.5); background: rgba(255,215,0,0.1); animation: revealPulse 0.8s ease-in-out infinite alternate; }
+.q-opt-letter {
+  font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.72rem;
+  width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; color: #fff; flex-shrink: 0;
+}
+.q-opt-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
 .game-wrapper {
   position: relative; width: 500px; height: 500px;
   border-radius: 12px; overflow: hidden;
@@ -201,9 +225,19 @@ body {
   <!-- Center game -->
   <div class="center-panel">
     <div class="question-area" id="questionArea">
-      <div class="q-prompt" id="qPrompt">请操控蛇前往正确答案</div>
-      <div class="q-word" id="qWord">按开始游戏</div>
-      <div class="q-pinyin" id="qPinyin"></div>
+      <div class="q-top-row">
+        <div class="q-left">
+          <div class="q-prompt" id="qPrompt">请操控蛇前往正确答案</div>
+          <div class="q-word" id="qWord">按开始游戏</div>
+          <div class="q-pinyin" id="qPinyin"></div>
+        </div>
+        <div class="q-right" id="qOptionsGrid">
+          <div class="q-opt" data-letter="A"><span class="q-opt-letter ref-a">A</span><span class="q-opt-text">---</span></div>
+          <div class="q-opt" data-letter="B"><span class="q-opt-letter ref-b">B</span><span class="q-opt-text">---</span></div>
+          <div class="q-opt" data-letter="C"><span class="q-opt-letter ref-c">C</span><span class="q-opt-text">---</span></div>
+          <div class="q-opt" data-letter="D"><span class="q-opt-letter ref-d">D</span><span class="q-opt-text">---</span></div>
+        </div>
+      </div>
     </div>
     <div class="game-wrapper" id="gameWrapper">
       <canvas id="gameCanvas" width="500" height="500"></canvas>
@@ -233,15 +267,6 @@ body {
         <button class="btn btn-reset" id="btnSpeedUp" style="padding:6px 12px;font-size:1.2rem;">+</button>
       </div>
       <div style="font-size:0.6rem;color:var(--text2);margin-top:4px;">−减速 / +加速</div>
-    </div>
-    <div class="info-card" id="refCard">
-      <h3>📋 选项参考</h3>
-      <div id="refOptions">
-        <div class="ref-option"><span class="ref-letter ref-a">A</span><span>---</span></div>
-        <div class="ref-option"><span class="ref-letter ref-b">B</span><span>---</span></div>
-        <div class="ref-option"><span class="ref-letter ref-c">C</span><span>---</span></div>
-        <div class="ref-option"><span class="ref-letter ref-d">D</span><span>---</span></div>
-      </div>
     </div>
     <div class="info-card">
       <h3>🎮 怎么玩</h3>
@@ -571,11 +596,12 @@ function resetGame() {
   document.getElementById('qWord').textContent = '按开始游戏';
   document.getElementById('qPinyin').textContent = '';
   document.getElementById('qPrompt').textContent = '请操控蛇前往正确答案';
-  document.getElementById('refOptions').innerHTML = `
-    <div class="ref-option"><span class="ref-letter ref-a">A</span><span>---</span></div>
-    <div class="ref-option"><span class="ref-letter ref-b">B</span><span>---</span></div>
-    <div class="ref-option"><span class="ref-letter ref-c">C</span><span>---</span></div>
-    <div class="ref-option"><span class="ref-letter ref-d">D</span><span>---</span></div>`;
+  // Reset inline options
+  const opts = document.getElementById('qOptionsGrid').children;
+  for (const el of opts) {
+    el.querySelector('.q-opt-text').textContent = '---';
+    el.classList.remove('reveal-correct');
+  }
   document.getElementById('btnStart').textContent = '▶ 开始游戏';
   document.getElementById('gameOverModal').classList.remove('active');
   updateUI();
@@ -931,32 +957,36 @@ function updateQuestionUI() {
   // Show different content based on question type to avoid revealing the answer
   switch (q.qType) {
     case 'word':
-      // Show English definition, hide the Chinese word (which is the answer)
       document.getElementById('qWord').textContent = q.wordObj.def;
       document.getElementById('qPinyin').textContent = '';
       break;
     case 'pinyin':
-      // Show pinyin only, hide the Chinese word (which is the answer)
       document.getElementById('qWord').textContent = q.wordObj.pinyin;
       document.getElementById('qPinyin').textContent = '';
       break;
     case 'pos':
-      // Show word + pinyin, hide the POS (which is the answer)
       document.getElementById('qWord').textContent = q.wordObj.word;
       document.getElementById('qPinyin').textContent = q.wordObj.pinyin;
       break;
-    default: // 'def' — show word + pinyin + pos, ask for English def
+    default: // 'def'
       document.getElementById('qWord').textContent = q.wordObj.word;
       document.getElementById('qPinyin').textContent = q.wordObj.pinyin + '  ' + q.wordObj.pos;
   }
 
-  // Update reference options
-  const refHTML = q.options.map(o => {
-    const cls = (revealActive && o.isCorrect) ? ' ref-option reveal-correct' : ' ref-option';
-    const letterCls = 'ref-letter ref-' + o.letter.toLowerCase();
-    return `<div class="${cls}"><span class="${letterCls}">${o.letter}</span><span>${o.text}</span></div>`;
-  }).join('');
-  document.getElementById('refOptions').innerHTML = refHTML;
+  // Update inline options grid
+  const opts = document.getElementById('qOptionsGrid').children;
+  for (let i = 0; i < opts.length; i++) {
+    const o = q.options[i];
+    const el = opts[i];
+    const textSpan = el.querySelector('.q-opt-text');
+    textSpan.textContent = o.text;
+    textSpan.title = o.text;
+    if (revealActive && o.isCorrect) {
+      el.classList.add('reveal-correct');
+    } else {
+      el.classList.remove('reveal-correct');
+    }
+  }
 }
 
 function updateRefHighlights() {
