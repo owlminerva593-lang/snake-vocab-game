@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🐍 贪吃蛇大冒险 · 生词闯关</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a1a; --bg2: #12122a; --card: #1a1a3e; --card2: #222250;
+  --text: #e8e8f0; --text2: #a0a0c0; --accent: #ff6b6b; --accent2: #ffd93d;
+  --success: #51cf66; --danger: #ff4444; --border: #2a2a5a;
+  --shadow: 0 4px 24px rgba(0,0,0,0.5); --glow: 0 0 20px rgba(255,107,107,0.3);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f0f2f5; --bg2: #e4e7eb; --card: #ffffff; --card2: #f8f9fa;
+    --text: #1a1a2e; --text2: #6b7280; --accent: #e94560; --accent2: #f59e0b;
+    --border: #d1d5db; --shadow: 0 4px 24px rgba(0,0,0,0.1); --glow: 0 0 20px rgba(233,69,96,0.15);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans HK', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.header {
+  text-align: center; padding: 10px 16px;
+  background: var(--card); border-bottom: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.header h1 {
+  font-size: clamp(1.1rem, 3vw, 1.6rem); font-weight: 900;
+  background: linear-gradient(135deg, #51cf66, #4dc9f6, #ffd93d);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  letter-spacing: 2px;
+}
+.header .subtitle { font-size: 0.7rem; color: var(--text2); }
+.main-container { display: flex; gap: 10px; max-width: 1060px; margin: 10px auto; padding: 0 10px; align-items: flex-start; }
+
+/* Left panel */
+.stats-panel { flex: 0 0 180px; display: flex; flex-direction: column; gap: 6px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow);
+}
+.stat-card .label { font-size: 0.65rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+.stat-card .value { font-family: 'Orbitron', monospace; font-size: 1.2rem; font-weight: 900; }
+.lives { display: flex; gap: 3px; }
+.lives .heart { font-size: 1rem; transition: all 0.3s; }
+.lives .heart.lost { opacity: 0.2; transform: scale(0.8); }
+.combo-display { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 700; color: var(--accent2); }
+.combo-display.pulse { animation: comboPulse 0.4s ease-out; }
+@keyframes comboPulse { 0% { transform: scale(1.5); color: #ff6b6b; } 100% { transform: scale(1); } }
+
+/* Center */
+.center-panel { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+.question-area {
+  background: var(--card); border: 2px solid var(--border);
+  border-radius: 12px; padding: 10px 18px; text-align: center;
+  box-shadow: var(--glow); width: 100%; max-width: 500px;
+}
+.question-area .q-word { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 900; }
+.question-area .q-pinyin { font-size: 0.85rem; color: var(--accent2); margin: 2px 0; }
+.question-area .q-prompt { font-size: 0.8rem; color: var(--text2); }
+.game-wrapper {
+  position: relative; width: 500px; height: 500px;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: var(--shadow), var(--glow); border: 3px solid var(--border);
+}
+#gameCanvas { display: block; width: 100%; height: 100%; background: #0d0d20; }
+.progress-bar-wrap {
+  width: 100%; max-width: 500px; background: var(--card2);
+  border-radius: 8px; height: 10px; overflow: hidden; border: 1px solid var(--border);
+}
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, #51cf66, #ffd93d); border-radius: 8px; transition: width 0.5s; width: 0%; }
+.progress-label { font-size: 0.6rem; color: var(--text2); text-align: center; }
+
+/* Right panel */
+.control-panel { flex: 0 0 200px; display: flex; flex-direction: column; gap: 8px; }
+.btn {
+  font-family: 'Noto Sans HK', sans-serif; padding: 10px 16px;
+  border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+  transition: all 0.2s; letter-spacing: 1px; text-align: center;
+}
+.btn:active { transform: scale(0.96); }
+.btn-start { background: linear-gradient(135deg, #51cf66, #40c057); color: #fff; box-shadow: 0 4px 14px rgba(81,207,102,0.4); }
+.btn-reset { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+.btn-cert { background: linear-gradient(135deg, #ffd93d, #f59e0b); color: #1a1a2e; box-shadow: 0 4px 14px rgba(255,217,61,0.4); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.info-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; box-shadow: var(--shadow); font-size: 0.7rem;
+}
+.info-card h3 { font-size: 0.8rem; margin-bottom: 6px; color: var(--accent2); }
+.info-card p { color: var(--text2); line-height: 1.5; margin: 2px 0; }
+.ref-option {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  border-radius: 6px; margin: 3px 0; font-size: 0.72rem;
+  border: 1px solid var(--border); background: var(--card2);
+}
+.ref-option .ref-letter {
+  font-family: 'Orbitron', monospace; font-weight: 900; font-size: 0.85rem;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; color: #fff; flex-shrink: 0;
+}
+.ref-a { background: #e94560; } .ref-b { background: #3b82f6; }
+.ref-c { background: #10b981; } .ref-d { background: #f59e0b; }
+.ref-option.reveal-correct { border-color: #ffd700; box-shadow: 0 0 12px rgba(255,215,0,0.5); background: rgba(255,215,0,0.1); animation: revealPulse 0.8s ease-in-out infinite alternate; }
+@keyframes revealPulse { 0% { box-shadow: 0 0 6px rgba(255,215,0,0.3); } 100% { box-shadow: 0 0 18px rgba(255,215,0,0.7); } }
+
+/* Mobile D-Pad */
+.mobile-controls { display: none; width: 100%; max-width: 260px; margin: 0 auto; }
+.dpad { display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; gap: 3px; justify-content: center; }
+.dpad-btn {
+  background: var(--card); border: 2px solid var(--border); border-radius: 12px;
+  font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text); transition: all 0.1s;
+}
+.dpad-btn:active { background: var(--accent); color: #fff; transform: scale(0.92); }
+.dpad-up { grid-column: 2; grid-row: 1; }
+.dpad-left { grid-column: 1; grid-row: 2; }
+.dpad-center { grid-column: 2; grid-row: 2; background: transparent; border: none; }
+.dpad-right { grid-column: 3; grid-row: 2; }
+.dpad-down { grid-column: 2; grid-row: 3; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; padding: 20px; }
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--card); border-radius: 16px; padding: 20px;
+  max-width: 440px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 1px solid var(--border); text-align: center; max-height: 90vh; overflow-y: auto;
+}
+.modal h2 { font-size: 1.3rem; margin-bottom: 12px; }
+.modal .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.modal .stat-val { font-family: 'Orbitron', monospace; font-weight: 700; }
+.modal input {
+  width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 0.95rem; text-align: center;
+  margin: 10px 0; font-family: 'Noto Sans HK', sans-serif;
+}
+.modal .btn { margin: 4px; display: inline-block; }
+#certCanvas { display: none; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 20px; font-weight: 700; z-index: 200;
+  opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; box-shadow: var(--shadow);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(5px); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main-container { flex-direction: column; align-items: center; }
+  .stats-panel { flex: 0 0 auto; flex-direction: row; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 500px; }
+  .stats-panel .stat-card { flex: 0 0 auto; min-width: 70px; padding: 8px; }
+  .control-panel { flex: 0 0 auto; width: 100%; max-width: 500px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .control-panel .btn { flex: 0 0 auto; }
+  .control-panel .info-card { width: 48%; min-width: 150px; }
+  .game-wrapper { width: min(500px, 100%); height: min(500px, 100vw); }
+  .mobile-controls { display: block; }
+}
+@media (min-width: 901px) { .mobile-controls { display: none; } }
+
+.powerup-active {
+  display: inline-block; padding: 2px 6px; border-radius: 5px;
+  font-size: 0.65rem; font-weight: 700; animation: powerupGlow 1s ease-in-out infinite alternate;
+}
+@keyframes powerupGlow { 0% { box-shadow: 0 0 5px currentColor; } 100% { box-shadow: 0 0 15px currentColor; } }
+.score-pop {
+  position: absolute; pointer-events: none;
+  font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.1rem;
+  animation: scoreUp 0.8s ease-out forwards; z-index: 50;
+}
+@keyframes scoreUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-35px) scale(1.4); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐍 贪吃蛇大冒险 · 生词闯关</h1>
+  <div class="subtitle">操控贪吃蛇，选出正确答案！</div>
+</div>
+
+<div class="main-container">
+  <!-- Left stats -->
+  <div class="stats-panel" id="statsPanel">
+    <div class="stat-card"><div class="label">🏅 等级</div><div class="value" id="levelDisplay" style="color:#cd7f32">青铜</div></div>
+    <div class="stat-card"><div class="label">⭐ 得分</div><div class="value" id="scoreDisplay" style="color:var(--accent2)">0</div></div>
+    <div class="stat-card"><div class="label">🎯 正确率</div><div class="value" id="accuracyDisplay" style="color:var(--success)">-</div></div>
+    <div class="stat-card"><div class="label">🔥 连击</div><div class="combo-display" id="comboDisplay">0</div></div>
+    <div class="stat-card"><div class="label">❤️ 生命</div><div class="lives" id="livesDisplay"></div></div>
+    <div class="stat-card"><div class="label">🎒 道具</div><div id="powerupDisplay" style="font-size:0.7rem;color:var(--text2)">无</div></div>
+  </div>
+
+  <!-- Center game -->
+  <div class="center-panel">
+    <div class="question-area" id="questionArea">
+      <div class="q-prompt" id="qPrompt">请操控蛇前往正确答案</div>
+      <div class="q-word" id="qWord">按开始游戏</div>
+      <div class="q-pinyin" id="qPinyin"></div>
+    </div>
+    <div class="game-wrapper" id="gameWrapper">
+      <canvas id="gameCanvas" width="500" height="500"></canvas>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="progress-label" id="progressLabel">升级进度 0 / 5</div>
+    <div class="mobile-controls" id="mobileControls">
+      <div class="dpad">
+        <button class="dpad-btn dpad-up" id="btnUp">▲</button>
+        <button class="dpad-btn dpad-left" id="btnLeft">◀</button>
+        <div class="dpad-center"></div>
+        <button class="dpad-btn dpad-right" id="btnRight">▶</button>
+        <button class="dpad-btn dpad-down" id="btnDown">▼</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="control-panel">
+    <button class="btn btn-start" id="btnStart">▶ 开始游戏</button>
+    <button class="btn btn-reset" id="btnReset">↺ 重新开始</button>
+    <div class="info-card" style="text-align:center;">
+      <h3>⚡ 速度调节</h3>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+        <button class="btn btn-reset" id="btnSpeedDown" style="padding:6px 12px;font-size:1.2rem;">−</button>
+        <span id="speedDisplay" style="font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;min-width:50px;">正常</span>
+        <button class="btn btn-reset" id="btnSpeedUp" style="padding:6px 12px;font-size:1.2rem;">+</button>
+      </div>
+      <div style="font-size:0.6rem;color:var(--text2);margin-top:4px;">−减速 / +加速</div>
+    </div>
+    <div class="info-card" id="refCard">
+      <h3>📋 选项参考</h3>
+      <div id="refOptions">
+        <div class="ref-option"><span class="ref-letter ref-a">A</span><span>---</span></div>
+        <div class="ref-option"><span class="ref-letter ref-b">B</span><span>---</span></div>
+        <div class="ref-option"><span class="ref-letter ref-c">C</span><span>---</span></div>
+        <div class="ref-option"><span class="ref-letter ref-d">D</span><span>---</span></div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>🎮 怎么玩</h3>
+      <p>1. 看题目，在右侧找到答案</p>
+      <p>2. 用方向键操控小蛇</p>
+      <p>3. 爬到对应<b>字母区域</b></p>
+      <p>4. 选对得分，选错扣血！</p>
+    </div>
+    <div class="info-card">
+      <h3>🎒 道具（连击获得）</h3>
+      <p>🟣 <b>穿墙</b>：可穿墙1次</p>
+      <p>🔵 <b>显形</b>：高亮正确答案</p>
+      <p>🟢 <b>冻结</b>：减速15秒</p>
+      <p>🔴 <b>生命</b>：+1条命（上限5）</p>
+      <p style="color:var(--text2);margin-top:3px;">连续答对3/6/9题获得道具</p>
+    </div>
+  </div>
+</div>
+
+<!-- Game Over Modal -->
+<div class="modal-overlay" id="gameOverModal">
+  <div class="modal">
+    <h2>🎮 游戏结束</h2>
+    <div class="stat-row"><span>最终得分</span><span class="stat-val" id="finalScore">0</span></div>
+    <div class="stat-row"><span>答题总数</span><span class="stat-val" id="finalTotal">0</span></div>
+    <div class="stat-row"><span>正确率</span><span class="stat-val" id="finalAccuracy">0%</span></div>
+    <div class="stat-row"><span>最高等级</span><span class="stat-val" id="finalLevel">青铜</span></div>
+    <div class="stat-row"><span>最大连击</span><span class="stat-val" id="finalCombo">0</span></div>
+    <input type="text" id="playerName" placeholder="输入你的名字（用于奖状）" maxlength="20">
+    <button class="btn btn-cert" id="btnCert">🎓 生成荣誉奖状</button>
+    <button class="btn btn-start" id="btnRestart">🔄 再来一局</button>
+  </div>
+</div>
+
+<!-- Certificate Modal -->
+<div class="modal-overlay" id="certModal">
+  <div class="modal" style="max-width:660px;">
+    <h2>🏆 荣誉奖状</h2>
+    <canvas id="certCanvas" width="600" height="420"></canvas>
+    <div style="margin-top:10px;">
+      <button class="btn btn-cert" id="btnDownload">📥 下载奖状 (PNG)</button>
+      <button class="btn btn-reset" id="btnCloseCert">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== roundRect POLYFILL ====================
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+    this.beginPath();
+    this.moveTo(x + r.tl, y);
+    this.lineTo(x + w - r.tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    this.lineTo(x + w, y + h - r.br);
+    this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    this.lineTo(x + r.bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    this.lineTo(x, y + r.tl);
+    this.quadraticCurveTo(x, y, x + r.tl, y);
+    this.closePath();
+  };
+}
+
+// ==================== VOCABULARY DATABASE ====================
+const VOCAB = [
+  { word:'哲学', pinyin:'zhéxué', pos:'n.', def:'philosophy' },
+  { word:'任何', pinyin:'rènhé', pos:'pron.', def:'any' },
+  { word:'阴', pinyin:'yīn', pos:'n.', def:'feminine or negative principle in nature' },
+  { word:'阳', pinyin:'yáng', pos:'n.', def:'masculine or positive principle in nature' },
+  { word:'方面', pinyin:'fāngmiàn', pos:'n.', def:'aspect, side' },
+  { word:'白昼', pinyin:'bái zhòu', pos:'n.', def:'daytime' },
+  { word:'属', pinyin:'shǔ', pos:'v.', def:'belong to' },
+  { word:'解释', pinyin:'jiěshì', pos:'v.', def:'explain, interpret' },
+  { word:'人体', pinyin:'rén tǐ', pos:'n.', def:'human body' },
+  { word:'腹', pinyin:'fù', pos:'n.', def:'abdomen' },
+  { word:'喜', pinyin:'xǐ', pos:'v.', def:'like, be fond of' },
+  { word:'兴奋', pinyin:'xīngfèn', pos:'adj.', def:'excited' },
+  { word:'症状', pinyin:'zhèngzhuàng', pos:'n.', def:'symptom' },
+  { word:'色泽', pinyin:'sèzé', pos:'n.', def:'color and luster' },
+  { word:'晦暗', pinyin:'huìàn', pos:'adj.', def:'dark and gloomy' },
+  { word:'畏', pinyin:'wèi', pos:'v.', def:'fear' },
+  { word:'寒', pinyin:'hán', pos:'adj.', def:'cold' },
+  { word:'抑制', pinyin:'yìzhì', pos:'adj.', def:'restrained, curbed' },
+  { word:'平衡', pinyin:'píng héng', pos:'n.', def:'balance' },
+  { word:'保证', pinyin:'bǎozhèng', pos:'v.', def:'ensure, guarantee' },
+  { word:'或者', pinyin:'huòzhě', pos:'conj.', def:'or' },
+  { word:'疾病', pinyin:'jíbìng', pos:'n.', def:'disease' },
+];
+
+// ==================== CONFIG ====================
+const COLS = 20, ROWS = 20, CELL = 25;
+const LEVELS = ['青铜', '白银', '黄金', '钻石', '最强王者'];
+const LEVEL_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#4dc9f6', '#ff6b6b'];
+const SPEEDS = [160, 135, 110, 90, 70];
+const OBSTACLE_COUNTS = [0, 3, 5, 8, 10];
+const MAX_LIVES = 5;
+const CORRECTS_PER_LEVEL = 5;
+const SCORE_CORRECT = 10;
+const COMBO_POWERUP_THRESHOLDS = [3, 6, 9]; // award powerup at these combos
+const POWERUP_TYPES = [
+  { id:'wall', name:'穿墙', icon:'🟣', color:'#c084fc' },
+  { id:'reveal', name:'显形', icon:'🔵', color:'#60a5fa' },
+  { id:'freeze', name:'冻结', icon:'🟢', color:'#4ade80' },
+  { id:'life', name:'生命', icon:'🔴', color:'#f87171' },
+];
+const ZONE_DEFS = [
+  { letter:'A', x:1, y:1, w:5, h:5, color:'#e94560', bg:'rgba(233,69,96,0.12)' },
+  { letter:'B', x:14, y:1, w:5, h:5, color:'#3b82f6', bg:'rgba(59,130,246,0.12)' },
+  { letter:'C', x:1, y:14, w:5, h:5, color:'#10b981', bg:'rgba(16,185,129,0.12)' },
+  { letter:'D', x:14, y:14, w:5, h:5, color:'#f59e0b', bg:'rgba(245,158,11,0.12)' },
+];
+
+// ==================== GAME STATE ====================
+let gameRunning = false, gamePaused = false;
+let snake = [], direction = { x:1, y:0 }, nextDirection = { x:1, y:0 };
+let obstacles = [], powerups = [];
+let score = 0, lives = 3, totalAnswers = 0, correctAnswers = 0;
+let comboCount = 0, maxCombo = 0, levelIndex = 0, correctInLevel = 0;
+let currentQuestion = null; // { wordObj, qType, correctLetter, options: [{letter, text, isCorrect}] }
+let lastMoveTime = 0, moveInterval = SPEEDS[0], speedOffset = 0, snakeMoving = false;
+let freezeEndTime = 0, revealActive = false, wallPassRemaining = 0;
+let scorePopups = [], animationId = null;
+let awardedCombos = new Set(); // track which combo thresholds have been awarded
+
+// ==================== DOM REFS ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const gameWrapper = document.getElementById('gameWrapper');
+
+// ==================== QUESTION GENERATION ====================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function generateQuestion() {
+  // Pick a random word
+  const wordObj = VOCAB[Math.floor(Math.random() * VOCAB.length)];
+
+  // Pick question type based on level
+  let qTypes;
+  if (levelIndex === 0) qTypes = ['def']; // bronze: word → pick correct def
+  else if (levelIndex <= 1) qTypes = ['def', 'word'];
+  else qTypes = ['def', 'word', 'pos', 'pinyin'];
+
+  const qType = qTypes[Math.floor(Math.random() * qTypes.length)];
+
+  let prompt, correctText;
+  switch (qType) {
+    case 'def':
+      prompt = '选出正确的英文释义';
+      correctText = wordObj.def;
+      break;
+    case 'word':
+      prompt = '选出对应的中文词语';
+      correctText = wordObj.word;
+      break;
+    case 'pos':
+      prompt = '选出正确的词性';
+      correctText = wordObj.pos;
+      break;
+    case 'pinyin':
+      prompt = '根据拼音选出正确的中文词';
+      correctText = wordObj.word;
+      break;
+    default:
+      prompt = '选出正确的英文释义';
+      correctText = wordObj.def;
+  }
+
+  // Generate 3 wrong options
+  const wrongs = [];
+  const usedTexts = new Set([correctText]);
+
+  if (qType === 'pos') {
+    // For POS: collect unique POS values, exclude correct one
+    const allPos = [...new Set(VOCAB.map(w => w.pos))];
+    const wrongPos = shuffle(allPos.filter(p => p !== correctText));
+    for (const p of wrongPos) {
+      if (wrongs.length >= 3) break;
+      if (!usedTexts.has(p)) { usedTexts.add(p); wrongs.push(p); }
+    }
+  } else {
+    const wrongPool = VOCAB.filter(w => w.word !== wordObj.word);
+    for (const w of shuffle(wrongPool)) {
+      if (wrongs.length >= 3) break;
+      let wrongText;
+      switch (qType) {
+        case 'def': wrongText = w.def; break;
+        case 'word': case 'pinyin': wrongText = w.word; break;
+      }
+      if (!usedTexts.has(wrongText)) {
+        usedTexts.add(wrongText);
+        wrongs.push(wrongText);
+      }
+    }
+  }
+  while (wrongs.length < 3) wrongs.push('---');
+
+  // Build options with letters
+  const letters = ['A', 'B', 'C', 'D'];
+  const allTexts = [correctText, ...wrongs];
+  // Shuffle so correct isn't always A
+  const indices = shuffle([0, 1, 2, 3]);
+  const options = indices.map((idx, i) => ({
+    letter: letters[i],
+    text: allTexts[idx],
+    isCorrect: idx === 0
+  }));
+  const correctLetter = options.find(o => o.isCorrect).letter;
+
+  return {
+    wordObj,
+    qType,
+    prompt,
+    correctLetter,
+    options,
+  };
+}
+
+// ==================== MAP MANAGEMENT ====================
+function isOccupied(x, y) {
+  if (snake.some(s => s.x === x && s.y === y)) return true;
+  if (obstacles.some(o => o.x === x && o.y === y)) return true;
+  if (powerups.some(p => p.x === x && p.y === y)) return true;
+  // Check zones
+  for (const z of ZONE_DEFS) {
+    if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return true;
+  }
+  return false;
+}
+
+function spawnObstacles() {
+  obstacles = [];
+  // Level-based obstacles
+  const count = OBSTACLE_COUNTS[levelIndex];
+  let tries = 0;
+  while (obstacles.length < count && tries < 500) {
+    const x = Math.floor(Math.random() * COLS);
+    const y = Math.floor(Math.random() * ROWS);
+    if (!isOccupied(x, y)) {
+      obstacles.push({ x, y });
+    }
+    tries++;
+  }
+  // Random simple obstacles: 3-6 extra small blocks per round
+  const simpleCount = 3 + Math.floor(Math.random() * 4);
+  tries = 0;
+  while (obstacles.filter(o => o.simple).length < simpleCount && tries < 500) {
+    const x = Math.floor(Math.random() * COLS);
+    const y = Math.floor(Math.random() * ROWS);
+    if (!isOccupied(x, y)) {
+      obstacles.push({ x, y, simple: true });
+    }
+    tries++;
+  }
+}
+
+function spawnPowerup(x, y) {
+  const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  let px, py, t = 0;
+  do {
+    px = x + Math.floor(Math.random() * 7) - 3;
+    py = y + Math.floor(Math.random() * 7) - 3;
+    px = Math.max(0, Math.min(COLS - 1, px));
+    py = Math.max(0, Math.min(ROWS - 1, py));
+    t++;
+    if (t > 30) break;
+  } while (isOccupied(px, py));
+  if (!isOccupied(px, py)) powerups.push({ x: px, y: py, type: type.id });
+}
+
+function resetSnake() {
+  const cx = 10, cy = 10;
+  snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+  direction = { x: 1, y: 0 };
+  nextDirection = { x: 1, y: 0 };
+  snakeMoving = false;
+}
+
+function newRound() {
+  currentQuestion = generateQuestion();
+  resetSnake();
+  spawnObstacles();
+  revealActive = false;
+  updateQuestionUI();
+}
+
+// ==================== ZONE DETECTION ====================
+function getZoneAt(x, y) {
+  for (const z of ZONE_DEFS) {
+    if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return z.letter;
+  }
+  return null;
+}
+
+// ==================== GAME LOGIC ====================
+function startGame() {
+  score = 0; lives = 3; totalAnswers = 0; correctAnswers = 0;
+  comboCount = 0; maxCombo = 0; levelIndex = 0; correctInLevel = 0;
+  speedOffset = 0; applySpeedOffset(); wallPassRemaining = 0;
+  revealActive = false; freezeEndTime = 0;
+  powerups = []; scorePopups = []; awardedCombos = new Set();
+  gameRunning = true; gamePaused = false; snakeMoving = false;
+  newRound();
+  updateUI();
+  document.getElementById('gameOverModal').classList.remove('active');
+  document.getElementById('btnStart').textContent = '⏸ 暂停';
+}
+
+function resetGame() {
+  gameRunning = false; gamePaused = false;
+  if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+  snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+  direction = { x: 1, y: 0 }; nextDirection = { x: 1, y: 0 };
+  obstacles = []; powerups = [];
+  score = 0; lives = 3; totalAnswers = 0; correctAnswers = 0;
+  comboCount = 0; maxCombo = 0; levelIndex = 0; correctInLevel = 0;
+  speedOffset = 0; applySpeedOffset(); wallPassRemaining = 0;
+  revealActive = false; freezeEndTime = 0; scorePopups = []; awardedCombos = new Set(); snakeMoving = false;
+  currentQuestion = null;
+  document.getElementById('qWord').textContent = '按开始游戏';
+  document.getElementById('qPinyin').textContent = '';
+  document.getElementById('qPrompt').textContent = '请操控蛇前往正确答案';
+  document.getElementById('refOptions').innerHTML = `
+    <div class="ref-option"><span class="ref-letter ref-a">A</span><span>---</span></div>
+    <div class="ref-option"><span class="ref-letter ref-b">B</span><span>---</span></div>
+    <div class="ref-option"><span class="ref-letter ref-c">C</span><span>---</span></div>
+    <div class="ref-option"><span class="ref-letter ref-d">D</span><span>---</span></div>`;
+  document.getElementById('btnStart').textContent = '▶ 开始游戏';
+  document.getElementById('gameOverModal').classList.remove('active');
+  updateUI();
+  render();
+}
+
+function moveSnake() {
+  if (!snakeMoving) return;
+  direction = { ...nextDirection };
+  const head = snake[0];
+  let newX = head.x + direction.x;
+  let newY = head.y + direction.y;
+
+  // Wall collision
+  if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS) {
+    if (wallPassRemaining > 0) {
+      wallPassRemaining--;
+      newX = ((newX % COLS) + COLS) % COLS;
+      newY = ((newY % ROWS) + ROWS) % ROWS;
+      showToast('🟣 穿墙！剩余次数：' + wallPassRemaining);
+    } else {
+      handleDamage('撞墙了');
+      return;
+    }
+  }
+
+  // Obstacle collision
+  const hitObs = obstacles.some(o => o.x === newX && o.y === newY);
+  if (hitObs) {
+    if (wallPassRemaining > 0) {
+      wallPassRemaining--;
+      newX = Math.max(0, Math.min(COLS - 1, head.x + direction.x * 2));
+      newY = Math.max(0, Math.min(ROWS - 1, head.y + direction.y * 2));
+      showToast('🟣 穿墙！跳过障碍，剩余：' + wallPassRemaining);
+    } else {
+      handleDamage('撞到障碍物');
+      return;
+    }
+  }
+
+  // Self collision
+  if (snake.some(s => s.x === newX && s.y === newY)) {
+    handleDamage('撞到自己了');
+    return;
+  }
+
+  // Move
+  const newHead = { x: newX, y: newY };
+  snake.unshift(newHead);
+
+  // Check if entering a zone
+  const zoneLetter = getZoneAt(newX, newY);
+  if (zoneLetter) {
+    totalAnswers++;
+    if (zoneLetter === currentQuestion.correctLetter) {
+      // CORRECT!
+      correctAnswers++;
+      comboCount++;
+      if (comboCount > maxCombo) maxCombo = comboCount;
+      const bonus = Math.min(comboCount, 10);
+      score += SCORE_CORRECT + bonus;
+      correctInLevel++;
+      showScorePop(newX, newY, `+${SCORE_CORRECT + bonus}`, '#51cf66');
+      showToast('✅ 正确！' + currentQuestion.wordObj.word + ' → ' + currentQuestion.wordObj.def);
+
+      // Check combo powerup awards
+      for (const thresh of COMBO_POWERUP_THRESHOLDS) {
+        if (comboCount >= thresh && !awardedCombos.has(thresh)) {
+          awardedCombos.add(thresh);
+          const pwType = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+          applyPowerup(pwType.id);
+        }
+      }
+
+      // Level up
+      if (correctInLevel >= CORRECTS_PER_LEVEL && levelIndex < 4) {
+        levelIndex++;
+        correctInLevel = 0;
+        applySpeedOffset();
+        showToast('🎉 升级！' + LEVELS[levelIndex] + '！');
+      }
+
+      newRound();
+    } else {
+      // WRONG
+      comboCount = 0;
+      const correctOpt = currentQuestion.options.find(o => o.isCorrect);
+      showToast('❌ 答错了！正确答案是 ' + currentQuestion.correctLetter + ': ' + correctOpt.text);
+      handleDamage('选错答案');
+    }
+  } else {
+    snake.pop(); // Don't grow unless entering zone
+  }
+
+  // Powerup pickup
+  const pwIdx = powerups.findIndex(p => p.x === newX && p.y === newY);
+  if (pwIdx >= 0) {
+    applyPowerup(powerups[pwIdx].type);
+    powerups.splice(pwIdx, 1);
+  }
+
+  // Freeze timer
+  if (freezeEndTime > 0 && Date.now() > freezeEndTime) {
+    freezeEndTime = 0;
+    applySpeedOffset();
+    showToast('冻结效果结束');
+  }
+
+  updateUI();
+}
+
+function handleDamage(reason) {
+  lives--;
+  comboCount = 0;
+  awardedCombos = new Set();
+  showToast('💥 ' + reason + '！生命-1');
+  if (lives <= 0) {
+    endGame();
+  } else {
+    gamePaused = true;
+    setTimeout(() => {
+      resetSnake();
+      gamePaused = false;
+      updateUI();
+    }, 1200);
+  }
+}
+
+function applyPowerup(type) {
+  switch (type) {
+    case 'wall':
+      wallPassRemaining++;
+      showToast('🟣 获得穿墙能力！(累计' + wallPassRemaining + '次)');
+      break;
+    case 'reveal':
+      revealActive = true;
+      updateRefHighlights();
+      showToast('🔵 正确答案已高亮！');
+      break;
+    case 'freeze':
+      freezeEndTime = Date.now() + 15000;
+      moveInterval = Math.max(50, Math.floor((SPEEDS[levelIndex] + speedOffset) * 1.8));
+      showToast('🟢 冻结！减速15秒');
+      break;
+    case 'life':
+      if (lives < MAX_LIVES) { lives++; showToast('🔴 +1 生命！(当前' + lives + ')'); }
+      else showToast('🔴 生命已满！');
+      break;
+  }
+}
+
+function endGame() {
+  gameRunning = false;
+  document.getElementById('btnStart').textContent = '▶ 开始游戏';
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalTotal').textContent = totalAnswers;
+  document.getElementById('finalAccuracy').textContent = totalAnswers > 0 ? Math.round(correctAnswers / totalAnswers * 100) + '%' : '0%';
+  document.getElementById('finalLevel').textContent = LEVELS[levelIndex];
+  document.getElementById('finalCombo').textContent = maxCombo;
+  document.getElementById('gameOverModal').classList.add('active');
+  updateUI();
+}
+
+// ==================== CANVAS RENDERING ====================
+function render() {
+  const isDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+  const gridLine = isDark ? '#1a1a35' : '#d1d5db';
+  const gridBg = isDark ? '#0a0a18' : '#f8fafc';
+
+  ctx.clearRect(0, 0, 500, 500);
+  ctx.fillStyle = gridBg;
+  ctx.fillRect(0, 0, 500, 500);
+
+  // Grid
+  ctx.strokeStyle = gridLine;
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, 500); ctx.stroke(); }
+  for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(500, y * CELL); ctx.stroke(); }
+
+  // Zones
+  for (const z of ZONE_DEFS) {
+    const zx = z.x * CELL, zy = z.y * CELL, zw = z.w * CELL, zh = z.h * CELL;
+    const isCorrect = currentQuestion && z.letter === currentQuestion.correctLetter;
+
+    // Zone background
+    ctx.fillStyle = z.bg;
+    ctx.beginPath();
+    ctx.roundRect(zx + 2, zy + 2, zw - 4, zh - 4, 10);
+    ctx.fill();
+
+    // Zone border - highlighted if reveal active and correct
+    if (revealActive && isCorrect) {
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 4;
+    } else {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = z.color;
+      ctx.lineWidth = 3;
+    }
+    ctx.beginPath();
+    ctx.roundRect(zx + 2, zy + 2, zw - 4, zh - 4, 10);
+    ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Zone letter
+    ctx.fillStyle = z.color;
+    ctx.font = 'bold 36px "Orbitron", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const cx = zx + zw / 2, cy = zy + zh / 2;
+    ctx.fillText(z.letter, cx, cy - 6);
+
+    // Small label
+    ctx.font = '10px "Noto Sans HK", sans-serif';
+    ctx.fillStyle = isDark ? '#888' : '#666';
+    const labels = { A:'选项A', B:'选项B', C:'选项C', D:'选项D' };
+    ctx.fillText(labels[z.letter], cx, cy + 20);
+  }
+
+  // Obstacles
+  for (const o of obstacles) {
+    const px = o.x * CELL, py = o.y * CELL;
+    if (o.simple) {
+      // Simple obstacles: small glowing dots
+      ctx.fillStyle = isDark ? '#6b5b3a' : '#d4a574';
+      ctx.beginPath();
+      ctx.arc(px + CELL / 2, py + CELL / 2, CELL / 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = isDark ? '#ff8c42' : '#e07b3c';
+      ctx.beginPath();
+      ctx.arc(px + CELL / 2, py + CELL / 2, CELL / 6, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = isDark ? '#3d3d5c' : '#9ca3af';
+      ctx.beginPath();
+      ctx.roundRect(px + 2, py + 2, CELL - 4, CELL - 4, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#ff4444';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px + 7, py + 7); ctx.lineTo(px + CELL - 7, py + CELL - 7);
+      ctx.moveTo(px + CELL - 7, py + 7); ctx.lineTo(px + 7, py + CELL - 7);
+      ctx.stroke();
+    }
+  }
+
+  // Powerups
+  for (const p of powerups) {
+    const cx = p.x * CELL + CELL / 2, cy = p.y * CELL + CELL / 2;
+    const typeInfo = POWERUP_TYPES.find(t => t.id === p.type);
+    ctx.shadowColor = typeInfo.color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = typeInfo.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, CELL / 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(typeInfo.icon, cx, cy);
+  }
+
+  // Snake
+  for (let i = snake.length - 1; i >= 0; i--) {
+    const s = snake[i];
+    const px = s.x * CELL, py = s.y * CELL;
+    if (i === 0) {
+      // Head
+      const hGrad = ctx.createLinearGradient(px, py, px + CELL, py + CELL);
+      hGrad.addColorStop(0, '#69db7c'); hGrad.addColorStop(1, '#2f9e44');
+      ctx.fillStyle = hGrad;
+      ctx.beginPath();
+      ctx.roundRect(px + 2, py + 2, CELL - 4, CELL - 4, 7);
+      ctx.fill();
+      ctx.strokeStyle = '#1b5e20'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(px + 2, py + 2, CELL - 4, CELL - 4, 7);
+      ctx.stroke();
+      // Eyes
+      ctx.fillStyle = '#fff';
+      let ex1, ey1, ex2, ey2;
+      if (direction.x === 1) { ex1 = px + 16; ey1 = py + 7; ex2 = px + 16; ey2 = py + 17; }
+      else if (direction.x === -1) { ex1 = px + 9; ey1 = py + 7; ex2 = px + 9; ey2 = py + 17; }
+      else if (direction.y === -1) { ex1 = px + 7; ey1 = py + 9; ex2 = px + 17; ey2 = py + 9; }
+      else { ex1 = px + 7; ey1 = py + 16; ex2 = px + 17; ey2 = py + 16; }
+      ctx.beginPath(); ctx.arc(ex1, ey1, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex2, ey2, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(ex1, ey1, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex2, ey2, 1.5, 0, Math.PI * 2); ctx.fill();
+    } else {
+      const alpha = 1 - (i / snake.length) * 0.5;
+      const bGrad = ctx.createLinearGradient(px, py, px + CELL, py + CELL);
+      bGrad.addColorStop(0, `rgba(81,207,102,${alpha})`);
+      bGrad.addColorStop(1, `rgba(64,192,87,${alpha * 0.7})`);
+      ctx.fillStyle = bGrad;
+      ctx.beginPath();
+      ctx.roundRect(px + 3, py + 3, CELL - 6, CELL - 6, 5);
+      ctx.fill();
+    }
+  }
+
+  // Score popups
+  for (let i = scorePopups.length - 1; i >= 0; i--) {
+    const pop = scorePopups[i];
+    pop.life -= 0.02;
+    if (pop.life <= 0) { scorePopups.splice(i, 1); continue; }
+    ctx.globalAlpha = pop.life;
+    ctx.fillStyle = pop.color;
+    ctx.font = 'bold 13px "Orbitron", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(pop.text, pop.x * CELL + CELL / 2, pop.y * CELL + CELL / 2 - (1 - pop.life) * 30);
+  }
+  ctx.globalAlpha = 1;
+
+  // Waiting for first input overlay
+  if (gameRunning && !snakeMoving && !gamePaused) {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, 500, 500);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 17px "Noto Sans HK", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('👆 按方向键 / 滑动屏幕', 250, 235);
+    ctx.fillText('操控小蛇出发！', 250, 265);
+  }
+
+  // Pause overlay
+  if (gamePaused) {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, 500, 500);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px "Noto Sans HK", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⏳ 准备中...', 250, 250);
+  }
+}
+
+function showScorePop(x, y, text, color) {
+  scorePopups.push({ x, y, text, color, life: 1 });
+}
+
+// ==================== UI ====================
+function updateQuestionUI() {
+  const q = currentQuestion;
+  document.getElementById('qPrompt').textContent = q.prompt;
+  // Show different content based on question type to avoid revealing the answer
+  switch (q.qType) {
+    case 'word':
+      // Show English definition, hide the Chinese word (which is the answer)
+      document.getElementById('qWord').textContent = q.wordObj.def;
+      document.getElementById('qPinyin').textContent = '';
+      break;
+    case 'pinyin':
+      // Show pinyin only, hide the Chinese word (which is the answer)
+      document.getElementById('qWord').textContent = q.wordObj.pinyin;
+      document.getElementById('qPinyin').textContent = '';
+      break;
+    case 'pos':
+      // Show word + pinyin, hide the POS (which is the answer)
+      document.getElementById('qWord').textContent = q.wordObj.word;
+      document.getElementById('qPinyin').textContent = q.wordObj.pinyin;
+      break;
+    default: // 'def' — show word + pinyin + pos, ask for English def
+      document.getElementById('qWord').textContent = q.wordObj.word;
+      document.getElementById('qPinyin').textContent = q.wordObj.pinyin + '  ' + q.wordObj.pos;
+  }
+
+  // Update reference options
+  const refHTML = q.options.map(o => {
+    const cls = (revealActive && o.isCorrect) ? ' ref-option reveal-correct' : ' ref-option';
+    const letterCls = 'ref-letter ref-' + o.letter.toLowerCase();
+    return `<div class="${cls}"><span class="${letterCls}">${o.letter}</span><span>${o.text}</span></div>`;
+  }).join('');
+  document.getElementById('refOptions').innerHTML = refHTML;
+}
+
+function updateRefHighlights() {
+  if (!currentQuestion) return;
+  updateQuestionUI();
+}
+
+function updateUI() {
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('accuracyDisplay').textContent = totalAnswers > 0 ? Math.round(correctAnswers / totalAnswers * 100) + '%' : '-';
+  document.getElementById('comboDisplay').textContent = comboCount;
+  if (comboCount > 0) {
+    document.getElementById('comboDisplay').classList.add('pulse');
+    setTimeout(() => document.getElementById('comboDisplay').classList.remove('pulse'), 400);
+  }
+  // Level
+  const lvlEl = document.getElementById('levelDisplay');
+  lvlEl.textContent = LEVELS[levelIndex];
+  lvlEl.style.color = LEVEL_COLORS[levelIndex];
+  // Lives
+  let heartsHTML = '';
+  for (let i = 0; i < MAX_LIVES; i++) {
+    heartsHTML += `<span class="heart${i >= lives ? ' lost' : ''}">❤️</span>`;
+  }
+  document.getElementById('livesDisplay').innerHTML = heartsHTML;
+  // Progress
+  const progress = (correctInLevel / CORRECTS_PER_LEVEL) * 100;
+  document.getElementById('progressBar').style.width = progress + '%';
+  document.getElementById('progressLabel').textContent = '升级进度 ' + correctInLevel + ' / ' + CORRECTS_PER_LEVEL;
+  // Powerup display
+  const pwDisplay = document.getElementById('powerupDisplay');
+  let pwHTML = '';
+  if (wallPassRemaining > 0) pwHTML += `<span class="powerup-active" style="color:#c084fc">🟣穿墙×${wallPassRemaining}</span> `;
+  if (revealActive) pwHTML += '<span class="powerup-active" style="color:#60a5fa">🔵显形</span> ';
+  if (freezeEndTime > 0) pwHTML += `<span class="powerup-active" style="color:#4ade80">🟢冻结${Math.ceil((freezeEndTime - Date.now()) / 1000)}s</span> `;
+  pwDisplay.innerHTML = pwHTML || '无';
+}
+
+// ==================== TOAST ====================
+let toastTimeout;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// ==================== CERTIFICATE ====================
+function generateCertificate(name) {
+  const certCanvas = document.getElementById('certCanvas');
+  certCanvas.style.display = 'block';
+  const cctx = certCanvas.getContext('2d');
+  const W = 600, H = 420;
+
+  const bgGrad = cctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#fef9ef'); bgGrad.addColorStop(0.5, '#fff7e6'); bgGrad.addColorStop(1, '#fef3c7');
+  cctx.fillStyle = bgGrad; cctx.fillRect(0, 0, W, H);
+
+  cctx.strokeStyle = '#d4a017'; cctx.lineWidth = 4;
+  cctx.strokeRect(10, 10, W - 20, H - 20);
+  cctx.strokeStyle = '#b8860b'; cctx.lineWidth = 2;
+  cctx.strokeRect(16, 16, W - 32, H - 32);
+
+  [[20,20],[W-20,20],[20,H-20],[W-20,H-20]].forEach(([cx, cy]) => {
+    cctx.fillStyle = '#d4a017'; cctx.beginPath(); cctx.arc(cx, cy, 12, 0, Math.PI * 2); cctx.fill();
+    cctx.fillStyle = '#fff'; cctx.beginPath(); cctx.arc(cx, cy, 4, 0, Math.PI * 2); cctx.fill();
+  });
+
+  cctx.fillStyle = '#8b4513';
+  cctx.font = 'bold 26px "Noto Sans HK", sans-serif';
+  cctx.textAlign = 'center';
+  cctx.fillText('🐍 贪吃蛇生词闯关 · 荣誉奖状', W / 2, 70);
+
+  cctx.strokeStyle = '#d4a017'; cctx.lineWidth = 1;
+  cctx.beginPath(); cctx.moveTo(100, 88); cctx.lineTo(W - 100, 88); cctx.stroke();
+
+  cctx.fillStyle = '#1a1a2e';
+  cctx.font = 'bold 20px "Noto Sans HK", sans-serif';
+  cctx.fillText(name || '冒险者', W / 2, 135);
+
+  cctx.font = '15px "Noto Sans HK", sans-serif';
+  const stats = [
+    ['最终得分', score.toString()],
+    ['正确率', totalAnswers > 0 ? Math.round(correctAnswers / totalAnswers * 100) + '%' : '0%'],
+    ['最高等级', LEVELS[levelIndex]],
+    ['答题总数', totalAnswers.toString()],
+    ['最大连击', maxCombo.toString()],
+  ];
+  const startY = 170;
+  stats.forEach(([label, val], i) => {
+    const y = startY + i * 28;
+    cctx.fillStyle = '#6b4c1e'; cctx.textAlign = 'right';
+    cctx.fillText(label + '：', W / 2 - 20, y);
+    cctx.fillStyle = '#1a1a2e'; cctx.textAlign = 'left';
+    cctx.font = 'bold 15px "Orbitron", monospace';
+    cctx.fillText(val, W / 2 + 10, y);
+    cctx.font = '15px "Noto Sans HK", sans-serif';
+  });
+
+  const now = new Date();
+  const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日';
+  cctx.fillStyle = '#6b4c1e'; cctx.textAlign = 'center'; cctx.font = '13px "Noto Sans HK", sans-serif';
+  cctx.fillText('颁发日期：' + dateStr, W / 2, startY + stats.length * 28 + 20);
+
+  cctx.fillStyle = '#b8860b';
+  cctx.font = 'italic 11px "Noto Sans HK", sans-serif';
+  cctx.fillText('学海无涯，单词为王！', W / 2, H - 28);
+
+  return certCanvas;
+}
+
+function downloadCertificate() {
+  const certCanvas = document.getElementById('certCanvas');
+  certCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '贪吃蛇生词闯关-奖状.png';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
+// ==================== INPUT ====================
+function setDirection(dx, dy) {
+  if (dx !== 0 && dx === -direction.x && dy === 0) return;
+  if (dy !== 0 && dy === -direction.y && dx === 0) return;
+  nextDirection = { x: dx, y: dy };
+  if (!snakeMoving) { snakeMoving = true; direction = { ...nextDirection }; lastMoveTime = performance.now(); }
+}
+
+document.addEventListener('keydown', e => {
+  const key = e.key;
+  if (key === 'ArrowUp' || key === 'w' || key === 'W') { e.preventDefault(); setDirection(0, -1); }
+  else if (key === 'ArrowDown' || key === 's' || key === 'S') { e.preventDefault(); setDirection(0, 1); }
+  else if (key === 'ArrowLeft' || key === 'a' || key === 'A') { e.preventDefault(); setDirection(-1, 0); }
+  else if (key === 'ArrowRight' || key === 'd' || key === 'D') { e.preventDefault(); setDirection(1, 0); }
+  else if (key === ' ') { e.preventDefault(); if (gameRunning) { gamePaused = !gamePaused; document.getElementById('btnStart').textContent = gamePaused ? '▶ 继续' : '⏸ 暂停'; } }
+});
+
+['btnUp','btnDown','btnLeft','btnRight'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (id === 'btnUp') setDirection(0, -1);
+    else if (id === 'btnDown') setDirection(0, 1);
+    else if (id === 'btnLeft') setDirection(-1, 0);
+    else if (id === 'btnRight') setDirection(1, 0);
+  });
+  el.addEventListener('touchstart', e => e.preventDefault());
+});
+
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) setDirection(dx > 0 ? 1 : -1, 0);
+  else if (Math.abs(dy) > 20) setDirection(0, dy > 0 ? 1 : 0);
+});
+gameWrapper.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+// Buttons
+document.getElementById('btnStart').addEventListener('click', () => {
+  if (!gameRunning) { startGame(); if (!animationId) gameLoop(0); }
+  else { gamePaused = !gamePaused; document.getElementById('btnStart').textContent = gamePaused ? '▶ 继续' : '⏸ 暂停'; }
+});
+document.getElementById('btnReset').addEventListener('click', resetGame);
+document.getElementById('btnCert').addEventListener('click', () => {
+  const name = document.getElementById('playerName').value.trim();
+  generateCertificate(name || '冒险者');
+  document.getElementById('certModal').classList.add('active');
+});
+document.getElementById('btnRestart').addEventListener('click', () => {
+  document.getElementById('gameOverModal').classList.remove('active');
+  startGame();
+  if (!animationId) gameLoop(0);
+});
+document.getElementById('btnDownload').addEventListener('click', downloadCertificate);
+document.getElementById('btnCloseCert').addEventListener('click', () => {
+  document.getElementById('certModal').classList.remove('active');
+});
+
+// Speed control
+function applySpeedOffset() {
+  moveInterval = Math.max(35, Math.min(250, SPEEDS[levelIndex] + speedOffset));
+  updateSpeedDisplay();
+}
+function updateSpeedDisplay() {
+  const labels = ['很快', '较快', '正常', '较慢', '很慢'];
+  const idx = Math.round(speedOffset / 15) + 2;
+  const label = labels[Math.max(0, Math.min(4, idx))] || '正常';
+  document.getElementById('speedDisplay').textContent = label;
+}
+function changeSpeed(delta) {
+  speedOffset = Math.max(-45, Math.min(90, speedOffset + delta));
+  applySpeedOffset();
+}
+document.getElementById('btnSpeedDown').addEventListener('click', () => changeSpeed(15));
+document.getElementById('btnSpeedUp').addEventListener('click', () => changeSpeed(-15));
+
+// ==================== GAME LOOP ====================
+function gameLoop(timestamp) {
+  animationId = requestAnimationFrame(gameLoop);
+  if (!gameRunning || gamePaused) { render(); return; }
+  if (timestamp - lastMoveTime >= moveInterval) {
+    moveSnake();
+    lastMoveTime = timestamp;
+    updateUI();
+  }
+  if (freezeEndTime > 0 && Date.now() > freezeEndTime) {
+    freezeEndTime = 0;
+    applySpeedOffset();
+    updateUI();
+  }
+  render();
+}
+
+// ==================== INIT ====================
+function init() {
+  updateUI();
+  document.getElementById('progressBar').style.width = '0%';
+  render();
+}
+init();
+</script>
+</body>
+</html>
